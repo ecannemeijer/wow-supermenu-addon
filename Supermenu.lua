@@ -654,6 +654,12 @@ local function CreateMainFrame()
         ReloadUI()
     end)
     reloadBtn:SetPoint("TOP", button4, "BOTTOM", 0, -8)
+
+    -- Set Reload UI button text color to red
+    local btnText = reloadBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    btnText:SetPoint("CENTER", reloadBtn, "CENTER", 0, 0)
+    btnText:SetText("Reload UI")
+    btnText:SetTextColor(1, 0, 0, 1)
 -- Guild Members Window
 local guildMembersFrame
 function ShowGuildMembersWindow()
