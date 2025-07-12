@@ -1,0 +1,11 @@
+## Supermenu.toc
+
+## Interface: 50400
+## Title: Supermenu
+## Notes: A simple addon to display a window with buttons for various functions.
+## Version: 1.0.0
+## Author: YourName
+## SavedVariables: SupermenuDB
+
+Supermenu.lua
+Supermenu.xml

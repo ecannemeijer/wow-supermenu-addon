@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Ui xmlns="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Frame name="SupermenuFrame" movable="true" enableMouse="true" hidden="true">
+        <Size>
+            <AbsDimension x="300" y="200"/>
+        </Size>
+        <Anchors>
+            <Anchor point="CENTER"/>
+        </Anchors>
+        <Backdrop>
+            <Background>
+                <Texture file="Interface/DialogFrame/UI-DialogBox-Background"/>
+            </Background>
+            <Border>
+                <Texture file="Interface/DialogFrame/UI-DialogBox-Border"/>
+            </Border>
+        </Backdrop>
+        <TitleRegion>
+            <Size>
+                <AbsDimension x="300" y="30"/>
+            </Size>
+            <Anchors>
+                <Anchor point="TOPLEFT"/>
+            </Anchors>
+            <FontString name="$parentTitle" inherits="GameFontNormalLarge">
+                <Anchors>
+                    <Anchor point="TOP" relativeTo="$parent" relativePoint="TOP" x="0" y="-10"/>
+                </Anchors>
+                <Text>Supermenu</Text>
+            </FontString>
+        </TitleRegion>
+        <Button name="SupermenuButton" inherits="UIPanelButtonTemplate">
+            <Size>
+                <AbsDimension x="100" y="30"/>
+            </Size>
+            <Anchors>
+                <Anchor point="CENTER" relativeTo="$parent" relativePoint="CENTER"/>
+            </Anchors>
+            <Text>Click Me!</Text>
+            <Scripts>
+                <OnClick>
+                    Supermenu_OnClick();
+                </OnClick>
+            </Scripts>
+        </Button>
+    </Frame>
+</Ui>
