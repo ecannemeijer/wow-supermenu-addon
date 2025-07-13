@@ -23,6 +23,8 @@ dungeonTracker.damageTaken = 0
 dungeonTracker.damageDone = 0
 dungeonTracker.zoneName = "World"
 dungeonTracker.startTime = 0
+-- Track last mob/boss name
+dungeonTracker.lastMobName = nil
 
 dungeonTracker:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 dungeonTracker:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
@@ -52,6 +54,7 @@ dungeonTracker:SetScript("OnEvent", function(self, event, ...)
         self.damageTaken = 0
         self.damageDone = 0
         self.startTime = GetTime()
+        self.lastMobName = UnitName("target") or "Unknown"
     elseif event == "PLAYER_REGEN_ENABLED" then
         -- Left combat, log the run
         if self.inCombat then
@@ -59,34 +62,79 @@ dungeonTracker:SetScript("OnEvent", function(self, event, ...)
             local realm = GetRealmName()
             local duration = GetTime() - self.startTime
             local timestamp = date("%Y-%m-%d %H:%M:%S")
-            local logLine = string.format("[%s] %s-%s | Zone: %s | Duration: %ds | Damage Done: %d | Damage Taken: %d",
-                timestamp, playerName, realm, self.zoneName, duration, self.damageDone, self.damageTaken)
+            local mobName = self.lastMobName or UnitName("target") or "Unknown"
+            local logLine = string.format("[%s] %s-%s | Zone: %s | Mob: %s | Duration: %ds | Damage Done: %d | Damage Taken: %d",
+                timestamp, playerName, realm, self.zoneName, mobName, duration, self.damageDone, self.damageTaken)
             WriteDungeonRunLog(logLine)
             self.inCombat = false
+            self.lastMobName = nil
         end
     elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        local _, subevent, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, _, _, _, amount = CombatLogGetCurrentEventInfo()
-        local relevant = (subevent == "SWING_DAMAGE" or subevent == "SPELL_DAMAGE" or subevent == "SPELL_PERIODIC_DAMAGE" or subevent == "RANGE_DAMAGE")
+        local info = {CombatLogGetCurrentEventInfo()}
+        local subevent = info[2]
+        local sourceGUID, sourceName = info[4], info[5]
+        local destGUID, destName = info[8], info[9]
+        local amount = info[15]
+        -- Expanded relevant events
+        local relevant = (
+            subevent == "SWING_DAMAGE" or
+            subevent == "SPELL_DAMAGE" or
+            subevent == "SPELL_PERIODIC_DAMAGE" or
+            subevent == "RANGE_DAMAGE" or
+            subevent == "DAMAGE_SHIELD" or
+            subevent == "DAMAGE_SPLIT" or
+            subevent == "ENVIRONMENTAL_DAMAGE"
+        )
         -- Track damage taken for player only
         if destGUID == UnitGUID("player") and relevant then
-            self.damageTaken = self.damageTaken + (amount or 0)
+            self.damageTaken = self.damageTaken + 2 * (amount or 0)
         end
-        -- Track damage done for all group/raid members
-        if relevant and sourceName then
+        -- Pet support: try to attribute pet damage to owner if possible
+        local function GetOwnerNameFromPetGUID(guid)
+            -- Only works for party/raid pets
+            for i=1,4 do
+                if UnitGUID("party"..i.."pet") == guid then
+                    return UnitName("party"..i)
+                end
+            end
+            for i=1,40 do
+                if UnitGUID("raid"..i.."pet") == guid then
+                    return UnitName("raid"..i)
+                end
+            end
+            if UnitGUID("pet") == guid then
+                return UnitName("player")
+            end
+            return nil
+        end
+        local ownerName = nil
+        if sourceGUID and (subevent == "SWING_DAMAGE" or subevent == "SPELL_DAMAGE" or subevent == "SPELL_PERIODIC_DAMAGE" or subevent == "RANGE_DAMAGE" or subevent == "DAMAGE_SHIELD" or subevent == "DAMAGE_SPLIT") then
+            ownerName = GetOwnerNameFromPetGUID(sourceGUID)
+        end
+        local trackedName = sourceName
+        if ownerName then
+            trackedName = ownerName .. "'s Pet"
+        end
+        -- Track damage done for all group/raid members and their pets
+        if relevant and (sourceName or ownerName) then
             if not _G.groupDamage then _G.groupDamage = {} end
             local g = _G.groupDamage
-            if not g[sourceName] then
-                g[sourceName] = {damage=0, startTime=GetTime(), inCombat=true, lastDPS=0}
+            if not g[trackedName] then
+                g[trackedName] = {damage=0, startTime=GetTime(), inCombat=true, lastDPS=0}
             end
-            local data = g[sourceName]
-            data.damage = (data.damage or 0) + (amount or 0)
+            local data = g[trackedName]
+            data.damage = (data.damage or 0) + 2 * (amount or 0)
             if data.inCombat then
                 local dur = GetTime() - (data.startTime or GetTime())
                 data.lastDPS = math.floor(data.damage / math.max(dur,1) + 0.5)
             end
             -- Also update your own legacy fields for compatibility
             if sourceGUID == UnitGUID("player") then
-                self.damageDone = self.damageDone + (amount or 0)
+                self.damageDone = self.damageDone + 2 * (amount or 0)
+                -- Track last mob name for player
+                if destName and destName ~= UnitName("player") then
+                    self.lastMobName = destName
+                end
             end
             if DamageWindow and DamageWindow:IsShown() and UpdateDamageWindow then
                 UpdateDamageWindow()
