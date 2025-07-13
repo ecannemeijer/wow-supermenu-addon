@@ -7,5 +7,12 @@
 ## Author: YourName
 ## SavedVariables: SupermenuDB
 
+MainFrame.lua
+StatsWindow.lua
+GuildMembers.lua
+KeybindMenu.lua
+DungeonLockouts.lua
+DungeonStats.lua
+DamageWindow.lua
+DungeonTracking.lua
 Supermenu.lua
-Supermenu.xml
