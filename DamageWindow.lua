@@ -1,6 +1,10 @@
 
 
 local lastDPS = nil
+-- Use the global groupDamage table set by DungeonTracking.lua
+local groupDamage = _G.groupDamage or {} -- [name] = {damage=0, startTime=0, inCombat=false, lastDPS=0}
+local tableRows = {}
+local NUM_ROWS = 8
 local function GetDamageStats()
     if not dungeonTracker then return 0, 1, "-" end
     if dungeonTracker.inCombat or dungeonTracker.damageDone > 0 or dungeonTracker.damageTaken > 0 then
@@ -22,7 +26,7 @@ DamageWindow = _G["DamageWindow"]
 -- Use only the global DamageWindow
 
 
-_G.DamageWindow:SetSize(260, 110)
+_G.DamageWindow:SetSize(340, 240)
 _G.DamageWindow:SetPoint("CENTER")
 _G.DamageWindow:Hide()
 _G.DamageWindow:SetMovable(true)
@@ -32,49 +36,81 @@ _G.DamageWindow:SetScript("OnDragStart", _G.DamageWindow.StartMoving)
 _G.DamageWindow:SetScript("OnDragStop", _G.DamageWindow.StopMovingOrSizing)
 _G.DamageWindow.title = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 _G.DamageWindow.title:SetPoint("TOP", 0, -10)
-_G.DamageWindow.title:SetText("Damage & DPS")
-_G.DamageWindow.damageText = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-_G.DamageWindow.damageText:SetPoint("TOPLEFT", 20, -40)
-_G.DamageWindow.dpsText = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-_G.DamageWindow.dpsText:SetPoint("TOPLEFT", 20, -70)
+_G.DamageWindow.title:SetText("Group Damage & DPS")
+-- Table headers
+local headerFont = "GameFontNormal"
+local colX = {20, 150, 250}
+local headers = {"Name", "Damage", "DPS"}
+for i, text in ipairs(headers) do
+    local header = _G.DamageWindow:CreateFontString(nil, "OVERLAY", headerFont)
+    header:SetPoint("TOPLEFT", colX[i], -40)
+    header:SetText(text)
+end
+
+-- Table rows
+local rowYStart = -60 -- Start just below headers
+for i = 1, NUM_ROWS do
+    local row = {}
+    row.bg = _G.DamageWindow:CreateTexture(nil, "BACKGROUND")
+    row.bg:SetColorTexture(i % 2 == 0 and 0.15 or 0.08, 0.08, 0.08, 0.7)
+    row.bg:SetPoint("TOPLEFT", 10, rowYStart - (i-1)*20)
+    row.bg:SetSize(320, 20)
+    row.name = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    row.name:SetPoint("LEFT", row.bg, "LEFT", 10, 0)
+    row.damage = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    row.damage:SetPoint("LEFT", row.bg, "LEFT", 140, 0)
+    row.dps = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    row.dps:SetPoint("LEFT", row.bg, "LEFT", 240, 0)
+    tableRows[i] = row
+end
 local closeBtn = CreateFrame("Button", nil, _G.DamageWindow, "UIPanelCloseButton")
 closeBtn:SetPoint("TOPRIGHT", _G.DamageWindow, "TOPRIGHT", -5, -5)
 
 
 
 
-local function UpdateDamageWindow()
-    local damage, duration, name = GetDamageStats()
-    local dpsText
-    if dungeonTracker and dungeonTracker.inCombat then
-        local dps = math.floor(damage / math.max(duration,1) + 0.5)
-        dpsText = "DPS: |cffffffff"..dps.."|r"
-        lastDPS = dps
-    elseif lastDPS then
-        dpsText = "DPS: |cffffffff"..lastDPS.."|r (last)"
-    else
-        dpsText = "DPS: -"
+
+
+-- Local implementation first
+local function UpdateDamageWindow_local()
+    -- Build a sorted list of group members by damage
+    local sorted = {}
+    -- Always use the global groupDamage table for live updates
+    for name, data in pairs(_G.groupDamage or {}) do
+        table.insert(sorted, {name=name, damage=data.damage or 0, dps=data.lastDPS or 0})
     end
-    _G.DamageWindow.title:SetText("Damage & DPS - "..(name or "-"))
-    _G.DamageWindow.damageText:SetText("Total Damage: |cffffffff"..damage.."|r")
-    _G.DamageWindow.dpsText:SetText(dpsText)
+    table.sort(sorted, function(a, b) return a.damage > b.damage end)
+
+    for i = 1, NUM_ROWS do
+        local row = tableRows[i]
+        local entry = sorted[i]
+        if entry then
+            row.name:SetText(entry.name)
+            row.damage:SetText(entry.damage)
+            row.dps:SetText(entry.dps)
+            if entry.name == UnitName("player") then
+                row.name:SetTextColor(0,1,0)
+            else
+                row.name:SetTextColor(1,1,1)
+            end
+            row.bg:Show()
+            row.name:Show()
+            row.damage:Show()
+            row.dps:Show()
+        else
+            row.name:SetText("")
+            row.damage:SetText("")
+            row.dps:SetText("")
+            row.bg:Hide()
+            row.name:Hide()
+            row.damage:Hide()
+            row.dps:Hide()
+        end
+    end
 end
 
 function UpdateDamageWindow()
-    local damage, duration, name = GetDamageStats()
-    local dpsText
-    if dungeonTracker and dungeonTracker.inCombat then
-        local dps = math.floor(damage / math.max(duration,1) + 0.5)
-        dpsText = "DPS: |cffffffff"..dps.."|r"
-        lastDPS = dps
-    elseif lastDPS then
-        dpsText = "DPS: |cffffffff"..lastDPS.."|r (last)"
-    else
-        dpsText = "DPS: -"
-    end
-    _G.DamageWindow.title:SetText("Damage & DPS - "..(name or "-"))
-    _G.DamageWindow.damageText:SetText("Total Damage: |cffffffff"..damage.."|r")
-    _G.DamageWindow.dpsText:SetText(dpsText)
+    UpdateDamageWindow_local()
 end
 _G.UpdateDamageWindow = UpdateDamageWindow
 

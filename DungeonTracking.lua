@@ -65,12 +65,29 @@ dungeonTracker:SetScript("OnEvent", function(self, event, ...)
             self.inCombat = false
         end
     elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        local _, subevent, _, sourceGUID, _, _, _, destGUID, _, _, _, _, _, _, amount = CombatLogGetCurrentEventInfo()
-        if destGUID == UnitGUID("player") and (subevent == "SWING_DAMAGE" or subevent == "SPELL_DAMAGE" or subevent == "SPELL_PERIODIC_DAMAGE" or subevent == "RANGE_DAMAGE") then
+        local _, subevent, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, _, _, _, amount = CombatLogGetCurrentEventInfo()
+        local relevant = (subevent == "SWING_DAMAGE" or subevent == "SPELL_DAMAGE" or subevent == "SPELL_PERIODIC_DAMAGE" or subevent == "RANGE_DAMAGE")
+        -- Track damage taken for player only
+        if destGUID == UnitGUID("player") and relevant then
             self.damageTaken = self.damageTaken + (amount or 0)
         end
-        if sourceGUID == UnitGUID("player") and (subevent == "SWING_DAMAGE" or subevent == "SPELL_DAMAGE" or subevent == "SPELL_PERIODIC_DAMAGE" or subevent == "RANGE_DAMAGE") then
-            self.damageDone = self.damageDone + (amount or 0)
+        -- Track damage done for all group/raid members
+        if relevant and sourceName then
+            if not _G.groupDamage then _G.groupDamage = {} end
+            local g = _G.groupDamage
+            if not g[sourceName] then
+                g[sourceName] = {damage=0, startTime=GetTime(), inCombat=true, lastDPS=0}
+            end
+            local data = g[sourceName]
+            data.damage = (data.damage or 0) + (amount or 0)
+            if data.inCombat then
+                local dur = GetTime() - (data.startTime or GetTime())
+                data.lastDPS = math.floor(data.damage / math.max(dur,1) + 0.5)
+            end
+            -- Also update your own legacy fields for compatibility
+            if sourceGUID == UnitGUID("player") then
+                self.damageDone = self.damageDone + (amount or 0)
+            end
             if DamageWindow and DamageWindow:IsShown() and UpdateDamageWindow then
                 UpdateDamageWindow()
             end
