@@ -1,87 +1,67 @@
-# Supermenu - WoW Classic Addon
+# Supermenu Damage & DPS Addon
 
-A comprehensive character statistics and menu addon for World of Warcraft Classic (Mists of Pandaria).
+A modern, modular World of Warcraft Classic AddOn for live group DPS tracking, inspired by Recount. Designed for clarity, transparency, and ease of use.
 
 ## Features
 
-### 📊 **Character Statistics Window**
-- **Comprehensive Stats Display**: View all your character's primary stats, combat stats, defensive stats, and resistances
-- **Accurate Calculations**: Uses correct MoP Classic formulas for armor reduction and other calculations
-- **Interactive Tooltips**: Hover over any stat to see detailed explanations
-- **Scrollable Interface**: Organized categories with color-coded headers
-- **Minimize/Maximize**: Collapsible window to save screen space
+- **Live Group DPS Table**
+  - Tracks and displays real-time DPS and total damage for all group/raid members.
+  - Includes pet damage, attributed to the owner.
+  - Class-colored names and bold highlight for your character.
+  - Dynamic bar graph visualization, scaled to top damage.
+  - Resizable, movable, and transparent window overlay.
 
-### 🎛️ **Main Menu Interface**
-- **Clean UI**: Modern dark blue theme matching the stats window
-- **Multiple Buttons**: Expandable menu system for additional functions
-- **Position Memory**: Remembers window position between game sessions
-- **Drag & Drop**: Movable windows for optimal placement
+- **Recount-Style UI**
+  - Modern, clean look with flat, semi-transparent background.
+  - Icon-based close, reset, and history toggle buttons.
+  - Professional column and header alignment.
+  - Minimum bar width for visibility, even at low damage.
 
-### ⚡ **Quality of Life Features**
-- **Auto-Show**: Menu appears automatically when you log in
-- **Toggle Commands**: Use `/supermenu` to show/hide the main menu
-- **Persistent Settings**: All window positions saved between sessions
-- **MoP Classic Compatible**: Designed specifically for Interface 50400
+- **History Feature**
+  - Toggle between current session and history view.
+  - History table shows last 10 dungeon/encounter runs.
+  - Columns: #, Name (mob/boss/zone), DPS, Total Damage.
+  - Bar graph and tooltips for each run.
+  - Dungeon run log is capped at 200 entries for performance.
 
-## Installation
+- **Reset Button**
+  - Clears both real-time DPS and history log.
 
-1. Download the addon files
-2. Extract to your `World of Warcraft\_classic_\Interface\AddOns\` directory
-3. Make sure the folder is named exactly `Supermenu`
-4. Restart WoW or reload your UI (`/reload`)
+- **Automatic Combat Detection**
+  - Resets timers and damage on combat start/end.
+  - Tracks zone and mob/boss names for history.
+
+- **Comprehensive Damage Tracking**
+  - Includes all major damage event types:
+    - SWING_DAMAGE, SPELL_DAMAGE, SPELL_PERIODIC_DAMAGE, RANGE_DAMAGE
+    - DAMAGE_SHIELD, DAMAGE_SPLIT, ENVIRONMENTAL_DAMAGE
+  - Pet and guardian damage is included and attributed to the owner.
+
+- **Performance**
+  - Efficient event handling and UI updates (throttled to 0.2s).
+  - Minimal memory usage, even in large raids.
+
+- **Classic API Compatible**
+  - Works with WoW Classic and Season of Discovery.
 
 ## Usage
 
-### Main Menu
-- The menu will appear automatically when you log in
-- Use `/supermenu` to toggle the main menu visibility
-- Drag the window to reposition it (position is saved)
-
-### Character Stats
-- Click "Character Stats" button to open the statistics window
-- Click again to close it
-- Use the minimize button (\_) to collapse the stats window
-- Hover over any stat for detailed tooltips
-- Scroll through different categories: Primary Stats, Combat Stats, Defensive Stats, Resistances
+- `/supermenu` to open the main menu (see Supermenu.lua for slash commands).
+- Click the parchment icon to toggle history.
+- Click the gold coin icon to reset DPS and history.
+- Drag the window or resize from the bottom-right corner.
 
 ## File Structure
+- `DamageWindow.lua` — Main UI and table logic
+- `DungeonTracking.lua` — Combat log event tracking and history
+- `Supermenu.lua` — AddOn entry point and slash commands
+- `Supermenu.toc` — AddOn manifest
+- `Logs/DungeonRuns.log` — Saved run history
 
-```
-Supermenu/
-├── Supermenu.toc      # Addon manifest
-├── Supermenu.lua      # Main addon logic
-├── Supermenu.xml      # UI frame definitions
-└── README.md          # This file
-```
+## Credits
+- Inspired by Recount and Details! Damage Meter
+- Developed by ecannemeijer
 
-## Technical Details
+---
 
-- **Interface Version**: 50400 (MoP Classic)
-- **Saved Variables**: `SupermenuDB` (stores window positions)
-- **Dependencies**: None (uses standard WoW API)
-
-## Stats Accuracy
-
-This addon uses the correct MoP Classic formulas for:
-- Armor damage reduction calculation
-- Combat rating conversions
-- Proper API function calls for all statistics
-
-## Compatibility
-
-- ✅ **Mists of Pandaria Classic** (Interface 50400)
-- ❌ Other WoW versions (would need API adjustments)
-
-## Support
-
-If you encounter any issues or have suggestions for improvements, please create an issue in this repository.
-
-## Version History
-
-### v1.0.0
-- Initial release
-- Complete stats system with accurate MoP Classic calculations
-- Position memory system
-- Modern UI design matching reference implementation
-- Auto-show functionality
-- Comprehensive tooltips and help system
+For bug reports or feature requests, open an issue on GitHub.
