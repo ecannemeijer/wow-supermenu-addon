@@ -22,6 +22,7 @@ local function GetDamageStats()
 end
 
 
+
 _G["DamageWindow"] = CreateFrame("Frame", "SupermenuDamageWindow", UIParent)
 DamageWindow = _G["DamageWindow"]
 _G.DamageWindow:SetSize(340, 220)
@@ -30,8 +31,33 @@ _G.DamageWindow:Hide()
 _G.DamageWindow:SetMovable(true)
 _G.DamageWindow:EnableMouse(true)
 _G.DamageWindow:RegisterForDrag("LeftButton")
-_G.DamageWindow:SetScript("OnDragStart", _G.DamageWindow.StartMoving)
-_G.DamageWindow:SetScript("OnDragStop", _G.DamageWindow.StopMovingOrSizing)
+_G.DamageWindow:SetResizable(true)
+_G.DamageWindow:SetScript("OnDragStart", function(self, button)
+    if button == "LeftButton" then
+        self:StartMoving()
+    end
+end)
+_G.DamageWindow:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+end)
+
+-- Resize handle (bottom right corner)
+local resizeBtn = CreateFrame("Button", nil, _G.DamageWindow)
+resizeBtn:SetSize(18, 18)
+resizeBtn:SetPoint("BOTTOMRIGHT", _G.DamageWindow, "BOTTOMRIGHT", -2, 2)
+resizeBtn:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+resizeBtn:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+resizeBtn:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+resizeBtn:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        self:GetParent():StartSizing("BOTTOMRIGHT")
+    end
+end)
+resizeBtn:SetScript("OnMouseUp", function(self, button)
+    if button == "LeftButton" then
+        self:GetParent():StopMovingOrSizing()
+    end
+end)
 
 -- Flat dark background
 local bg = _G.DamageWindow:CreateTexture(nil, "BACKGROUND")
@@ -45,38 +71,57 @@ local closeBtn = CreateFrame("Button", nil, _G.DamageWindow, "UIPanelCloseButton
 closeBtn:SetPoint("TOPRIGHT", _G.DamageWindow, "TOPRIGHT", -2, -2)
 closeBtn:SetScale(0.85)
 local headerFont = "GameFontNormalSmall"
-local colX = {18, 140, 250}
+
+-- Dynamic columns and rows
 local headers = {"Name", "Damage", "DPS"}
-for i, text in ipairs(headers) do
-    local header = _G.DamageWindow:CreateFontString(nil, "OVERLAY", headerFont)
-    header:SetPoint("TOPLEFT", colX[i], -12)
-    header:SetText(text)
-    header:SetTextColor(0.8, 0.8, 0.85)
+local headerObjs = {}
+local function LayoutDamageWindow()
+    local width = _G.DamageWindow:GetWidth()
+    local colX = {
+        18,
+        math.floor(width * 0.41),
+        math.floor(width * 0.74)
+    }
+    -- Layout headers
+    for i, text in ipairs(headers) do
+        if not headerObjs[i] then
+            headerObjs[i] = _G.DamageWindow:CreateFontString(nil, "OVERLAY", headerFont)
+            headerObjs[i]:SetTextColor(0.8, 0.8, 0.85)
+            headerObjs[i]:SetText(text)
+        end
+        headerObjs[i]:SetPoint("TOPLEFT", colX[i], -12)
+    end
+    -- Layout rows
+    local rowYStart = -30
+    local rowWidth = width - 20
+    for i = 1, NUM_ROWS do
+        local row = tableRows[i]
+        if not row then
+            row = {}
+            row.bg = _G.DamageWindow:CreateTexture(nil, "BACKGROUND")
+            row.bar = _G.DamageWindow:CreateTexture(nil, "ARTWORK")
+            row.name = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            row.damage = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            row.dps = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            tableRows[i] = row
+        end
+        row.bg:SetColorTexture(0, 0, 0, 0.15)
+        row.bg:SetPoint("TOPLEFT", 10, rowYStart - (i-1)*22)
+        row.bg:SetSize(rowWidth, 18)
+        row.bar:SetPoint("TOPLEFT", 12, rowYStart - (i-1)*22)
+        row.bar:SetHeight(16)
+        row.bar:SetColorTexture(0.2, 0.6, 1, 1)
+        -- Fontstrings
+        row.name:SetPoint("LEFT", row.bg, "LEFT", 8, 0)
+        row.damage:SetPoint("LEFT", row.bg, "LEFT", math.floor(rowWidth * 0.37), 0)
+        row.dps:SetPoint("LEFT", row.bg, "LEFT", math.floor(rowWidth * 0.68), 0)
+    end
 end
 
--- Table rows
-local rowYStart = -30 -- Start just below headers
-for i = 1, NUM_ROWS do
-    local row = {}
-    -- Row background for mouseover (bottom layer)
-    row.bg = _G.DamageWindow:CreateTexture(nil, "BACKGROUND")
-    row.bg:SetColorTexture(0, 0, 0, 0.15)
-    row.bg:SetPoint("TOPLEFT", 10, rowYStart - (i-1)*22)
-    row.bg:SetSize(320, 18)
-    -- Bar background (damage bar, above bg)
-    row.bar = _G.DamageWindow:CreateTexture(nil, "ARTWORK")
-    row.bar:SetPoint("TOPLEFT", 12, rowYStart - (i-1)*22)
-    row.bar:SetSize(2, 16) -- width set dynamically, min 2
-    row.bar:SetColorTexture(0.2, 0.6, 1, 0.85)
-    -- Fontstrings (above bar)
-    row.name = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    row.name:SetPoint("LEFT", row.bg, "LEFT", 8, 0)
-    row.damage = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    row.damage:SetPoint("LEFT", row.bg, "LEFT", 130, 0)
-    row.dps = _G.DamageWindow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    row.dps:SetPoint("LEFT", row.bg, "LEFT", 220, 0)
-    tableRows[i] = row
-end
+for i = 1, NUM_ROWS do tableRows[i] = nil end -- clear for re-layout
+LayoutDamageWindow()
+
+_G.DamageWindow:HookScript("OnSizeChanged", LayoutDamageWindow)
 
 
 
@@ -106,6 +151,7 @@ local function GetClassColor(name)
     return 1,1,1
 end
 
+
 local function UpdateDamageWindow_local()
     -- Build a sorted list of group members by damage
     local sorted = {}
@@ -116,6 +162,8 @@ local function UpdateDamageWindow_local()
     end
     table.sort(sorted, function(a, b) return a.damage > b.damage end)
 
+    local width = _G.DamageWindow:GetWidth()
+    local rowWidth = width - 20
     for i = 1, NUM_ROWS do
         local row = tableRows[i]
         local entry = sorted[i]
@@ -123,10 +171,13 @@ local function UpdateDamageWindow_local()
             row.name:SetText(entry.name)
             row.damage:SetText(entry.damage)
             row.dps:SetText(entry.dps)
-            -- Bar width proportional to max damage, min 2px if damage > 0
-            local barWidth = 1
+            -- Bar width proportional to max damage, min 20px if damage > 0
+            local minBarWidth = 20
+            local barWidth = minBarWidth
             if maxDamage > 0 and entry.damage > 0 then
-                barWidth = math.max(2, math.floor((entry.damage / maxDamage) * 298))
+                barWidth = math.max(minBarWidth, math.floor((entry.damage / maxDamage) * (rowWidth - 22)))
+                -- If window is extremely small, don't let bar overflow
+                barWidth = math.min(barWidth, rowWidth - 22)
             end
             row.bar:SetWidth(barWidth)
             row.bar:SetHeight(16)
