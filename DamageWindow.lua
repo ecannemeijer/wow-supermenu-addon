@@ -588,32 +588,47 @@ local function UpdateDamageWindow_local()
         if entry then
             -- Set class icon
             local class = nil
+            -- Try to find the unit for this name in party or raid
             if entry.name == UnitName("player") then
                 class = select(2, UnitClass("player"))
             else
-                for j=1,4 do if entry.name == UnitName("party"..j) then class = select(2, UnitClass("party"..j)) break end end
-                if not class then
-                    local num = GetNumGroupMembers and GetNumGroupMembers() or 0
+                -- Check party
+                for j=1,4 do
+                    local unit = "party"..j
+                    if UnitExists(unit) and UnitName(unit) == entry.name then
+                        class = select(2, UnitClass(unit))
+                        break
+                    end
+                end
+                -- Check raid if not found
+                if not class and IsInRaid() then
+                    for j=1,40 do
+                        local unit = "raid"..j
+                        if UnitExists(unit) and UnitName(unit) == entry.name then
+                            class = select(2, UnitClass(unit))
+                            break
+                        end
+                    end
+                end
+                -- Fallback: use GetRaidRosterInfo if still not found
+                if not class and GetNumGroupMembers and GetRaidRosterInfo then
+                    local num = GetNumGroupMembers()
                     for j=1,num do
-                        local n, _, subGroup, _, _, classFile = GetRaidRosterInfo(j)
+                        local n, _, _, _, _, classFile = GetRaidRosterInfo(j)
                         if n and n == entry.name then class = classFile break end
                     end
                 end
             end
             if class and CLASS_ICON_TCOORDS[class] then
-                -- Force DRUID icon for all for testing
                 row.classIcon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
-                row.classIcon:SetTexCoord(unpack(CLASS_ICON_TCOORDS["DRUID"]))
+                row.classIcon:SetTexCoord(unpack(CLASS_ICON_TCOORDS[class]))
                 row.classIcon:SetDrawLayer("OVERLAY", 7)
                 row.classIcon:SetAlpha(1)
                 row.classIcon:Show()
             else
-                -- Force DRUID icon for all for testing
-                row.classIcon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
-                row.classIcon:SetTexCoord(unpack(CLASS_ICON_TCOORDS["DRUID"]))
-                row.classIcon:SetDrawLayer("OVERLAY", 7)
+                row.classIcon:SetTexture(nil)
                 row.classIcon:SetAlpha(1)
-                row.classIcon:Show()
+                row.classIcon:Hide()
             end
             row.classIcon:ClearAllPoints()
             row.classIcon:SetPoint("LEFT", row.bg, "LEFT", 4, 0)
@@ -635,10 +650,43 @@ local function UpdateDamageWindow_local()
             row.bar:SetWidth(barWidth)
             row.bar:SetHeight(16)
             row.bar:Show()
-            row.bar:SetColorTexture(0.2, 0.6, 1, 1)
-            -- Class color for name
+            -- Bar: class color
             local r,g,b = GetClassColor(entry.name)
-            row.name:SetTextColor(r,g,b)
+            row.bar:SetColorTexture(r, g, b, 1)
+            -- Name: white for all except priest, priest gets light yellow
+            local classForText = nil
+            if entry.name == UnitName("player") then
+                classForText = select(2, UnitClass("player"))
+            else
+                for j=1,4 do
+                    local unit = "party"..j
+                    if UnitExists(unit) and UnitName(unit) == entry.name then
+                        classForText = select(2, UnitClass(unit))
+                        break
+                    end
+                end
+                if not classForText and IsInRaid() then
+                    for j=1,40 do
+                        local unit = "raid"..j
+                        if UnitExists(unit) and UnitName(unit) == entry.name then
+                            classForText = select(2, UnitClass(unit))
+                            break
+                        end
+                    end
+                end
+                if not classForText and GetNumGroupMembers and GetRaidRosterInfo then
+                    local num = GetNumGroupMembers()
+                    for j=1,num do
+                        local n, _, _, _, _, classFile = GetRaidRosterInfo(j)
+                        if n and n == entry.name then classForText = classFile break end
+                    end
+                end
+            end
+            if classForText == "PRIEST" then
+                row.name:SetTextColor(0.3, 0.3, 0.3)
+            else
+                row.name:SetTextColor(1, 1, 1)
+            end
             -- Bold font for self
             if entry.name == UnitName("player") then
                 row.name:SetFontObject("GameFontNormalLarge")
