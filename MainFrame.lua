@@ -23,6 +23,11 @@ function CreateMainFrame()
     }
     -- Move Damage button above Reload UI
     table.insert(buttons, #buttons, table.remove(buttons, #buttons-1))
+    -- Correctly swap the positions of Damage and Reload UI buttons
+    local damageButtonIndex = #buttons - 1
+    local reloadUIButtonIndex = #buttons
+    buttons[damageButtonIndex], buttons[reloadUIButtonIndex] = buttons[reloadUIButtonIndex], buttons[damageButtonIndex]
+
     local buttonHeight = 28
     local gap = 8
     local topMargin = 55

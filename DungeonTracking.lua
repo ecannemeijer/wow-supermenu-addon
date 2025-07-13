@@ -1,4 +1,3 @@
-
 -- Dungeon run tracking en logging
 -- Zie Supermenu.lua voor slash command en SavedVariables
 
@@ -58,13 +57,12 @@ dungeonTracker:SetScript("OnEvent", function(self, event, ...)
     elseif event == "PLAYER_REGEN_ENABLED" then
         -- Left combat, log the run
         if self.inCombat then
-            local playerName = UnitName("player")
-            local realm = GetRealmName()
+            local playerName = UnitName("player"):match("^[^%-]+") -- Extract only the name before the hyphen
             local duration = GetTime() - self.startTime
             local timestamp = date("%Y-%m-%d %H:%M:%S")
             local mobName = self.lastMobName or UnitName("target") or "Unknown"
-            local logLine = string.format("[%s] %s-%s | Zone: %s | Mob: %s | Duration: %ds | Damage Done: %d | Damage Taken: %d",
-                timestamp, playerName, realm, self.zoneName, mobName, duration, self.damageDone, self.damageTaken)
+            local logLine = string.format("[%s] %s | Zone: %s | Mob: %s | Duration: %ds | Damage Done: %d | Damage Taken: %d",
+                timestamp, playerName, self.zoneName, mobName, duration, self.damageDone, self.damageTaken)
             WriteDungeonRunLog(logLine)
             self.inCombat = false
             self.lastMobName = nil
